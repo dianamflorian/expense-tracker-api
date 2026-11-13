@@ -92,4 +92,18 @@ export class ExpenseModel {
       });
     });
   }
+
+  static getSummary(): Promise<{ category: string; total_amount: number; count: number }[]> {
+    return new Promise((resolve, reject) => {
+      const db = Database.getInstance();
+      db.all(
+        `SELECT category, SUM(amount) as total_amount, COUNT(*) as count FROM expenses GROUP BY category`,
+        [],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows as { category: string; total_amount: number; count: number }[]);
+        }
+      );
+    });
+  }
 }

@@ -25,7 +25,23 @@ afterAll(async () => {
 describe('Expenses API', () => {
   let createdExpenseId: number;
 
-  it('should create a new expense', async () => {
+  it('should fail validation when creating an expense with invalid amount or date', async () => {
+    const response = await request(app)
+      .post('/api/v1/expenses')
+      .send({
+        title: 'Bad Expense',
+        amount: -10,
+        category: 'Food',
+        date: 'invalid-date',
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toHaveProperty('error', 'Validation failed');
+    expect(response.body.details).toContain('Amount must be a positive number greater than 0.');
+    expect(response.body.details).toContain('Date must be a valid date format (YYYY-MM-DD).');
+  });
+
+  it('should create a new valid expense', async () => {
     const response = await request(app)
       .post('/api/v1/expenses')
       .send({
@@ -52,6 +68,25 @@ describe('Expenses API', () => {
     expect(Array.isArray(response.body.data)).toBe(true);
   });
 
+  it('should calculate expense summary grouped by category', async () => {
+    // Add another expense in a different or same category
+    await request(app)
+      .post('/api/v1/expenses')
+      .send({
+        title: 'Electricity Bill',
+        amount: 100.00,
+        category: 'Utilities',
+        date: '2026-06-02',
+      });
+
+    const response = await request(app).get('/api/v1/expenses/summary');
+    expect(response.status).toBe(200);
+    expect(response.body.data).toHaveProperty('categories');
+    expect(response.body.data).toHaveProperty('total_spending');
+    expect(response.body.data.total_spending).toBe(145.50);
+    expect(Array.isArray(response.body.data.categories)).toBe(true);
+  });
+
   it('should retrieve an expense by id', async () => {
     const response = await request(app).get(`/api/v1/expenses/${createdExpenseId}`);
     expect(response.status).toBe(200);
@@ -75,7 +110,7 @@ describe('Expenses API', () => {
   it('should delete an expense', async () => {
     const response = await request(app).delete(`/api/v1/expenses/${createdExpenseId}`);
     expect(response.status).toBe(200);
-    expect(response.body.message).toBe('Expense deleted successfully');
+    expect(response.body.message).toBe('Expense deleted successfully.');
   });
 
   it('should return 404 for non-existent expense', async () => {

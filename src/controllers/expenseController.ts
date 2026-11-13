@@ -86,4 +86,20 @@ export class ExpenseController {
       next(error);
     }
   }
+
+  static async getExpenseSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const summary = await ExpenseModel.getSummary();
+      const totalSpending = summary.reduce((acc, curr) => acc + curr.total_amount, 0);
+
+      res.status(200).json({
+        data: {
+          categories: summary,
+          total_spending: totalSpending,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
